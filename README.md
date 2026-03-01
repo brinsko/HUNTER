@@ -33,4 +33,5 @@ source venv/bin/activate
 chmod +x setup.sh
 ./setup.sh
 nano domains.txt
+chmod +x or_hunter.sh
 ./or_hunter.sh
