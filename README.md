@@ -26,12 +26,6 @@ Built for security researchers, bug bounty hunters, and red teamers.
 ```markdown
 ## 🚀 Setup & Run
 
-git clone https://github.com/brinsko/HUNTER.git
-cd HUNTER
-python3 -m venv venv
-source venv/bin/activate
-chmod +x setup.sh
-./setup.sh
-nano domains.txt
-chmod +x or_hunter.sh
-./or_hunter.sh
+git clone https://github.com/brinsko/HUNTER.git && cd HUNTER && python3 -m venv venv && source venv/bin/activate && chmod +x setup.sh && ./setup.sh && nano domains.txt
+chmod +x or_hunter.sh && ./or_hunter.sh
+
