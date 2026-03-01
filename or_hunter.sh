@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -d "$SCRIPT_DIR/venv" ]; then
+    source "$SCRIPT_DIR/venv/bin/activate"
+else
+    echo "[!] venv not found. Run ./setup.sh first."
+    exit 1
+fi
 # Elite Open Redirect Hunter - 2026 Hybrid Elite Edition (Upgraded Pipeline)
 set -u
 set -o pipefail
