@@ -26,7 +26,7 @@ Built for security researchers, bug bounty hunters, and red teamers.
 ```markdown
 ## 🚀 Setup & Run
 
-git clone https://github.com/lol/HUNTER.git
+git clone https://github.com/brinsko/HUNTER.git
 cd HUNTER
 python3 -m venv venv
 source venv/bin/activate
