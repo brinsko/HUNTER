@@ -1,141 +1,216 @@
 #!/usr/bin/env bash
-# Open Redirect Hunter — Bootstrap Installer (Silent by Default)
+set -u
 
-set -euo pipefail
-
-REPO_BASE="https://raw.githubusercontent.com/YOUR_USERNAME/open-redirect-hunter/main"
-
-VERBOSE=0
-[[ "${1:-}" == "--verbose" ]] && VERBOSE=1
-
-GREEN='\033[0;32m'
+# ─────────────────────────────
+# Color Definitions (MUST be before use)
+# ─────────────────────────────
 RED='\033[0;31m'
+GREEN='\033[1;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[1;34m'
+MAGENTA='\033[1;35m'
+CYAN='\033[1;36m'
+WHITE='\033[1;37m'
 NC='\033[0m'
 
-log() { [[ $VERBOSE -eq 1 ]] && echo -e "$1"; }
-ok()  { [[ $VERBOSE -eq 1 ]] && echo -e "${GREEN}[OK]${NC} $1"; }
-fail() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+# ─────────────────────────────
+# Banner
+# ─────────────────────────────
+echo -e "${CYAN}═══════════════════════════════════════════════${NC}"
+echo -e "   ${GREEN}⚔  Open Redirect Hunter${NC}"
+echo -e "   ${WHITE}Security Automation Framework${NC}"
+echo
+echo -e "   ${YELLOW}Author  : Brinsko${NC}"
+echo -e "   ${MAGENTA}Version : 1.0${NC}"
+echo -e "${CYAN}═══════════════════════════════════════════════${NC}"
+echo
 
-run_cmd() {
-  if [[ $VERBOSE -eq 1 ]]; then
-    "$@"
-  else
-    "$@" >/dev/null 2>&1
-  fi
+fail() { echo -e "${RED}[FAIL]${NC} $1"; }
+pass() { echo -e "${GREEN}[OK]${NC} $1"; }
+warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
+info() { echo "   $1"; }
+
+cmd_exists() {
+  command -v "$1" >/dev/null 2>&1
 }
 
-require_bin() {
-  command -v "$1" >/dev/null 2>&1 || fail "$1 not installed"
-  ok "$1 detected"
-}
+# ─────────────────────────────
+# 1. System basics
+# ─────────────────────────────
+echo "[1] System basics"
 
-############################################
-# 1️⃣ System Requirements
-############################################
-
-log "Checking system..."
-
-for bin in python3 go curl; do
-  require_bin "$bin"
-done
-
-############################################
-# 2️⃣ Download Core Files
-############################################
-
-FILES=("or_hunter.sh" "finder.py" "dashboard.py")
-
-for file in "${FILES[@]}"; do
-  if [[ ! -f "$file" ]]; then
-    log "Downloading $file"
-    run_cmd curl -sSfL "$REPO_BASE/$file" -o "$file" || fail "Download failed: $file"
-  fi
-done
-
-chmod +x or_hunter.sh || fail "Failed to set executable permission"
-
-############################################
-# 3️⃣ Required Text Files
-############################################
-
-[[ -f domains.txt ]] || touch domains.txt
-
-if [[ ! -f redirect_params.txt ]]; then
-  run_cmd curl -sSfL "$REPO_BASE/redirect_params.txt" -o redirect_params.txt \
-    || echo "redirect" > redirect_params.txt
+if cmd_exists go; then
+  pass "Go installed ($(go version | awk '{print $3}'))"
+else
+  fail "Go not installed"
+  exit 1
 fi
 
-############################################
-# 4️⃣ Python Environment
-############################################
-
-if [[ ! -d venv ]]; then
-  run_cmd python3 -m venv venv || fail "Failed to create virtual environment"
+if cmd_exists python3; then
+  pass "Python3 installed"
+else
+  fail "Python3 not installed"
+  exit 1
 fi
 
-source venv/bin/activate || fail "Failed to activate virtual environment"
+if cmd_exists git; then
+  pass "Git installed"
+else
+  fail "Git not installed"
+  exit 1
+fi
 
-run_cmd python -m pip install --upgrade pip setuptools wheel
+# ─────────────────────────────
+# 2. Go tools
+# ─────────────────────────────
+echo
+echo "[2] Go-based tools"
 
-PY_PACKAGES=(flask flask_socketio requests reportlab)
-
-for pkg in "${PY_PACKAGES[@]}"; do
-  python -c "import $pkg" 2>/dev/null || run_cmd pip install "$pkg"
-done
-
-############################################
-# 5️⃣ Go Tools
-############################################
-
-export PATH="$HOME/go/bin:$PATH"
-
-declare -A GO_TOOLS=(
-  [subfinder]="github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"
-  [httpx]="github.com/projectdiscovery/httpx/cmd/httpx@latest"
-  [nuclei]="github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest"
-  [katana]="github.com/projectdiscovery/katana/cmd/katana@latest"
-  [gau]="github.com/lc/gau/v2/cmd/gau@latest"
-  [waybackurls]="github.com/tomnomnom/waybackurls@latest"
-  [gf]="github.com/tomnomnom/gf@latest"
-  [qsreplace]="github.com/tomnomnom/qsreplace@latest"
-  [ffuf]="github.com/ffuf/ffuf@latest"
-  [unfurl]="github.com/tomnomnom/unfurl@latest"
+tools=(
+  subfinder
+  amass
+  dnsx
+  httpx
+  nuclei
+  gau
+  gf
+  qsreplace
+  ffuf
+  waybackurls
 )
 
-for tool in "${!GO_TOOLS[@]}"; do
-  command -v "$tool" >/dev/null 2>&1 || run_cmd go install "${GO_TOOLS[$tool]}"
+for t in "${tools[@]}"; do
+  if cmd_exists "$t"; then
+    pass "$t installed"
+  else
+    fail "$t missing"
+    info "Install manually: go install <repo>"
+  fi
 done
 
-############################################
-# 6️⃣ Nuclei Templates
-############################################
+# ─────────────────────────────
+# 3. Python packages
+# ─────────────────────────────
+echo
+echo "[3] Python packages"
 
-run_cmd nuclei -update-templates || true
+packages=(flask uro requests reportlab)
 
-############################################
-# DONE
-############################################
+for pkg in "${packages[@]}"; do
+  if python3 -c "import $pkg" 2>/dev/null; then
+    pass "$pkg installed"
+  else
+    fail "$pkg missing"
+    info "Installing $pkg..."
 
+    if [[ -n "${VIRTUAL_ENV:-}" ]]; then
+      pip install "$pkg"
+    else
+      python3 -m pip install --user "$pkg"
+    fi
+  fi
+done
+
+# ─────────────────────────────
+# 4. ParamSpider
+# ─────────────────────────────
+# ─────────────────────────────
+# 4. ParamSpider
+# ─────────────────────────────
 echo
-echo -e "${GREEN}Installation Complete.${NC}"
+echo "[4] ParamSpider"
+
+if cmd_exists paramspider; then
+  pass "ParamSpider installed"
+else
+  warn "ParamSpider not found. Installing from GitHub..."
+
+  if [[ -n "${VIRTUAL_ENV:-}" ]]; then
+    pip install git+https://github.com/devanshbatham/ParamSpider.git
+  else
+    python3 -m pip install --user git+https://github.com/devanshbatham/ParamSpider.git
+  fi
+
+  if cmd_exists paramspider; then
+    pass "ParamSpider installed successfully"
+  else
+    fail "ParamSpider installation failed"
+  fi
+fi
+
+# ─────────────────────────────
+# 5. LOXS auto-download & move (flat structure)
+# ─────────────────────────────
 echo
-echo "Run:"
-echo "  source venv/bin/activate"
-echo "  ./or_hunter.sh" also tell them to add domain/subdomain in domains.txtecho
-echo -e "${GREEN}Installation Complete.${NC}"
+echo "[5] LOXS scanner"
+
+if [[ -f loxs.py ]]; then
+  pass "LOXS already present"
+else
+  warn "LOXS not found. Downloading..."
+
+  [[ -d loxs ]] && rm -rf loxs
+
+  git clone https://github.com/coffinxp/loxs.git
+
+  if [[ -d loxs ]]; then
+    shopt -s dotglob
+    mv loxs/* . 2>/dev/null
+    shopt -u dotglob
+
+    rm -rf loxs
+    pass "LOXS downloaded and moved to current directory"
+  else
+    fail "Failed to clone LOXS repository"
+    exit 1
+  fi
+fi
+
+# ─────────────────────────────
+# 6. Nuclei templates
+# ─────────────────────────────
 echo
-echo "Next Steps:"
+echo "[6] Nuclei templates"
+
+if ls ~/nuclei-templates/http/vulnerabilities/generic/open-redirect*.yaml >/dev/null 2>&1; then
+  pass "Open-redirect templates found"
+else
+  warn "Open-redirect templates not found"
+  info "Run: nuclei -update-templates"
+fi
+
+# ─────────────────────────────
+# 7. Input files (CHECK ONLY)
+# ─────────────────────────────
 echo
-echo "1. Add target domain(s) or subdomain(s) to:"
-echo "      domains.txt"
+echo "[7] Input files"
+
+if [[ -f domains.txt && -s domains.txt ]]; then
+  pass "domains.txt exists"
+else
+  fail "domains.txt missing or empty"
+fi
+
+if [[ -f redirect_params.txt && -s redirect_params.txt ]]; then
+  pass "redirect_params.txt exists"
+else
+  fail "redirect_params.txt missing or empty"
+fi
+
+# ─────────────────────────────
+# Done
+# ─────────────────────────────
 echo
-echo "   Example:"
-echo "      example.com"
-echo "      api.example.com"
+echo "═══════════════════════════════════════════════"
+echo -e "${GREEN}[✓] Environment Ready.${NC}"
 echo
-echo "2. Activate the environment:"
-echo "      source venv/bin/activate"
+echo -e "Next Step:"
+echo -e "  ➜ Add your target domain or subdomain inside ${YELLOW}domains.txt${NC}"
 echo
-echo "3. Run the scanner:"
-echo "      ./or_hunter.sh"
+echo -e "  Example format inside ${YELLOW}domains.txt${NC}:"
+echo -e "      ${GREEN}example.com${NC}"
+echo -e "      ${GREEN}sub.example.com${NC}"
 echo
+echo -e "Then run:"
+echo -e "  ➜ ${GREEN}./or_hunter.sh${NC}"
+echo "═══════════════════════════════════════════════"
