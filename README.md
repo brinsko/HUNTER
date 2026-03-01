@@ -23,12 +23,14 @@ Built for security researchers, bug bounty hunters, and red teamers.
 
 ## ⚙ Installation
 
-### 1️⃣ Clone the repository
+```markdown
+## 🚀 Setup & Run
 
-git clone https://github.com/brinsko/HUNTER.git
+```bash
+git clone https://github.com/lol/HUNTER.git
 cd HUNTER
 python3 -m venv venv
-source venv/bin/activate 
+source venv/bin/activate
 chmod +x setup.sh
 ./setup.sh
 nano domains.txt
