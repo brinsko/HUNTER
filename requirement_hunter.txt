@@ -1,0 +1,8 @@
+# ==============================
+# PYTHON DEPENDENCIES
+# ==============================
+flask
+flask-socketio
+reportlab
+requests
+
