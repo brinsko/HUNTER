@@ -93,10 +93,19 @@ done
 echo
 echo "[3] Python packages"
 
-packages=(flask flask_socketio eventlet uro requests reportlab)
+declare -A packages=(
+  [flask]="flask"
+  [flask_socketio]="flask_socketio"
+  [eventlet]="eventlet"
+  [uro]="uro"
+  [requests]="requests"
+  [reportlab]="reportlab"
+)
 
-for pkg in "${packages[@]}"; do
-  if python3 -c "import ${pkg/_/-}" 2>/dev/null; then
+for pkg in "${!packages[@]}"; do
+  module="${packages[$pkg]}"
+
+  if python3 -c "import $module" 2>/dev/null; then
     pass "$pkg installed"
   else
     info "Installing $pkg..."
@@ -107,7 +116,7 @@ for pkg in "${packages[@]}"; do
       python3 -m pip install --user "$pkg" >/dev/null 2>&1
     fi
 
-    if python3 -c "import ${pkg/_/-}" 2>/dev/null; then
+    if python3 -c "import $module" 2>/dev/null; then
       pass "$pkg installed successfully"
     else
       fail "$pkg installation failed"
